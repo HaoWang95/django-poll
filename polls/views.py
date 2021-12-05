@@ -1,12 +1,14 @@
-from django.shortcuts import render
-from django.http import HttpResponse, HttpRequest
-from .models import Question
+from django.http.response import HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
+from django.http import HttpRequest
+from django.urls import reverse
+from .models import Choice, Question
 
-# Create your views here.
+
 
 def index(request: HttpRequest):
     print(request.get_full_path_info())
-    question_list = Question.objects.order_by('-last_modified')[:5]
+    question_list = Question.objects.order_by('-last_modified')[:5][::-1]
     context = {
         'question_list': question_list
     }
@@ -14,16 +16,28 @@ def index(request: HttpRequest):
 
 
 def detail(request: HttpRequest, question_id):
-    question = Question.objects.filter(id=question_id)
-    response = f'Detail page for question {question_id} - {question.get()}'
-    return HttpResponse(response)
+    question = get_object_or_404(Question, pk=question_id)
+    return render(request, 'polls/detail.html', {'question': question})
 
 
 def result(request: HttpRequest, question_id):
-    response = f'Results of question {question_id}'
-    return HttpResponse(response)
+    q = get_object_or_404(Question, pk=question_id)
+    print(f'q in result view -> {result}')
+    return render(request, 'polls/result.html', {'question': q})
 
 
 def select(request: HttpRequest, question_id):
-    response = f'Select on question: {question_id}'
-    return HttpResponse(response)
+    question = get_object_or_404(Question, pk=question_id)
+    print(f'q in select -> {question}')
+    try:
+        selected_choice = question.choice_set.get(pk=request.POST['choice'])
+        print(f'selected choice -> {selected_choice}')
+    except (KeyError, Choice.DoesNotExist):
+        return render(request, "polls/detail.html", {
+            'question': question,
+            'error_message': "You did not select a choice"
+        })
+    else:
+        selected_choice.votes += 1
+        selected_choice.save()
+        return HttpResponseRedirect(reverse('polls:result', args=(question_id,)))
