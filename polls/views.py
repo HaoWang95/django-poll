@@ -1,9 +1,19 @@
+from django import template
+from django.db.models.query import QuerySet
 from django.http.response import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpRequest
 from django.urls import reverse
+from django.views import generic
 from .models import Choice, Question
 
+
+class IndexView(generic.ListView):
+    template_name = 'polls/index.html'
+    context_object_name = 'question_list'
+
+    def get_queryset(self) -> QuerySet[Question]:
+        return Question.objects.order_by('-last_modified')[:5][::-1]
 
 
 def index(request: HttpRequest):
